@@ -1,7 +1,7 @@
 """Tests for API endpoints."""
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 
 def test_health_check(client):
@@ -25,8 +25,8 @@ def test_root_endpoint(client):
 
 @patch('app.api.endpoints.redis_client')
 @patch('app.services.storage.storage_service.get_presigned_url')
-@patch('app.services.storage.storage_service.upload_certificate')
-@patch('app.services.generator.certificate_generator.generate_certificate')
+@patch('app.services.storage.storage_service.upload_certificate', new_callable=AsyncMock)
+@patch('app.services.generator.certificate_generator.generate_certificate', new_callable=AsyncMock)
 def test_generate_certificate(
     mock_generate,
     mock_upload,
@@ -58,8 +58,8 @@ def test_generate_certificate(
 
 
 @patch('app.services.storage.storage_service.get_presigned_url')
-@patch('app.services.storage.storage_service.upload_certificate')
-@patch('app.services.generator.certificate_generator.generate_certificate')
+@patch('app.services.storage.storage_service.upload_certificate', new_callable=AsyncMock)
+@patch('app.services.generator.certificate_generator.generate_certificate', new_callable=AsyncMock)
 def test_batch_certificate_generation_sync(
     mock_generate,
     mock_upload,
@@ -114,9 +114,10 @@ def test_batch_certificate_generation_async(mock_redis, client):
 
 
 @patch('app.services.storage.storage_service.get_presigned_url')
-@patch('app.services.storage.storage_service.certificate_exists')
+@patch('app.services.storage.storage_service.certificate_exists', new_callable=AsyncMock)
 def test_get_certificate_status_found(mock_exists, mock_presigned_url, client):
     """Test getting certificate status when certificate exists."""
+    # Mock async method properly
     mock_exists.return_value = True
     mock_presigned_url.return_value = "https://example.com/certificates/CERT-123.pdf"
     
@@ -128,9 +129,10 @@ def test_get_certificate_status_found(mock_exists, mock_presigned_url, client):
     assert data["status"] == "completed"
 
 
-@patch('app.services.storage.storage_service.certificate_exists')
+@patch('app.services.storage.storage_service.certificate_exists', new_callable=AsyncMock)
 def test_get_certificate_status_not_found(mock_exists, client):
     """Test getting certificate status when certificate doesn't exist."""
+    # Mock async method properly
     mock_exists.return_value = False
     
     response = client.get("/api/v1/certificates/CERT-NOTFOUND")
