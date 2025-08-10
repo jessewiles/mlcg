@@ -86,8 +86,12 @@ def test_batch_certificate_generation_sync(
     assert len(data["certificates"]) == 2
 
 
-def test_batch_certificate_generation_async(client):
+@patch('app.api.endpoints.redis_client')
+def test_batch_certificate_generation_async(mock_redis, client):
     """Test batch certificate generation (asynchronous)."""
+    # Mock Redis client
+    mock_redis.hset.return_value = True
+    
     request = {
         "certificates": [
             {
