@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  certificate-service:
+    build: .
+    container_name: mlcg
+    ports:
+      - "8001:8001"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=INFO
+      - STORAGE_BACKEND=local
+      - LOCAL_STORAGE_PATH=/app/certificates
+      - REDIS_URL=redis://redis:6379
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-microlearn-certificates}
+    depends_on:
+      - redis
+    volumes:
+      - ./app:/app/app
+      - ./certificates:/app/certificates
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+    networks:
+      - certificate-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: mlcg-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - certificate-network
+
+networks:
+  certificate-network:
+    driver: bridge
+
+volumes:
+  redis-data:
