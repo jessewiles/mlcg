@@ -23,6 +23,7 @@ def test_root_endpoint(client):
     assert data["service"] == "certificate-generation-service"
 
 
+@patch('app.api.endpoints.redis_client')
 @patch('app.services.storage.storage_service.get_presigned_url')
 @patch('app.services.storage.storage_service.upload_certificate')
 @patch('app.services.generator.certificate_generator.generate_certificate')
@@ -30,10 +31,14 @@ def test_generate_certificate(
     mock_generate,
     mock_upload,
     mock_presigned_url,
+    mock_redis,
     client,
     sample_certificate_request
 ):
     """Test certificate generation endpoint."""
+    # Mock Redis to return None (no cache)
+    mock_redis.get.return_value = None
+    
     # Mock the certificate generation
     mock_generate.return_value = b"PDF content"
     mock_upload.return_value = "certificates/2024/01/TEST-CERT-001.pdf"
