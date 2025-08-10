@@ -23,21 +23,21 @@ def test_root_endpoint(client):
     assert data["service"] == "certificate-generation-service"
 
 
+@patch('app.services.storage.storage_service.get_presigned_url')
 @patch('app.services.storage.storage_service.upload_certificate')
 @patch('app.services.generator.certificate_generator.generate_certificate')
 def test_generate_certificate(
     mock_generate,
     mock_upload,
+    mock_presigned_url,
     client,
     sample_certificate_request
 ):
     """Test certificate generation endpoint."""
     # Mock the certificate generation
     mock_generate.return_value = b"PDF content"
-    mock_upload.return_value = (
-        "certificates/2024/01/TEST-CERT-001.pdf",
-        "https://example.com/certificates/TEST-CERT-001.pdf"
-    )
+    mock_upload.return_value = "certificates/2024/01/TEST-CERT-001.pdf"
+    mock_presigned_url.return_value = "https://example.com/certificates/TEST-CERT-001.pdf"
     
     response = client.post(
         "/api/v1/certificates/generate",
@@ -52,21 +52,21 @@ def test_generate_certificate(
     assert data["status"] == "completed"
 
 
+@patch('app.services.storage.storage_service.get_presigned_url')
 @patch('app.services.storage.storage_service.upload_certificate')
 @patch('app.services.generator.certificate_generator.generate_certificate')
 def test_batch_certificate_generation_sync(
     mock_generate,
     mock_upload,
+    mock_presigned_url,
     client,
     sample_batch_request
 ):
     """Test batch certificate generation (synchronous)."""
     # Mock the certificate generation
     mock_generate.return_value = b"PDF content"
-    mock_upload.return_value = (
-        "certificates/2024/01/cert.pdf",
-        "https://example.com/certificates/cert.pdf"
-    )
+    mock_upload.return_value = "certificates/2024/01/cert.pdf"
+    mock_presigned_url.return_value = "https://example.com/certificates/cert.pdf"
     
     response = client.post(
         "/api/v1/certificates/batch",
