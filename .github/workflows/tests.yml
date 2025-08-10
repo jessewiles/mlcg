@@ -30,7 +30,7 @@ jobs:
         run: poetry install --no-interaction --with dev
 
       - name: Run tests
-        run: poetry run pytest tests/ --maxfail=1 --disable-warnings --tb=short
+        run: poetry run pytest tests/ -vv --maxfail=1 --tb=long
 
       - name: Verify Docker build
         run: docker build -t mlcg-test:latest .

@@ -113,10 +113,12 @@ def test_batch_certificate_generation_async(mock_redis, client):
     assert data["certificates"] is None
 
 
+@patch('app.services.storage.storage_service.get_presigned_url')
 @patch('app.services.storage.storage_service.certificate_exists')
-def test_get_certificate_status_found(mock_exists, client):
+def test_get_certificate_status_found(mock_exists, mock_presigned_url, client):
     """Test getting certificate status when certificate exists."""
     mock_exists.return_value = True
+    mock_presigned_url.return_value = "https://example.com/certificates/CERT-123.pdf"
     
     response = client.get("/api/v1/certificates/CERT-123")
     
