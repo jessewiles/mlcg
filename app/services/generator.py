@@ -1,8 +1,10 @@
 """Certificate generation service."""
 
 import io
+import os
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from reportlab.lib import colors
@@ -10,6 +12,7 @@ from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
 from reportlab.lib.pagesizes import A4, letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
@@ -25,6 +28,28 @@ class CertificateGenerator:
         self.page_size = letter if settings.certificate_page_size == "Letter" else A4
         self.styles = getSampleStyleSheet()
         self._setup_styles()
+        self._load_logo()
+    
+    def _load_logo(self):
+        """Load the MicroLearn logo image."""
+        # Try multiple possible logo locations
+        logo_paths = [
+            Path("app/static/assets/microlearn-logo.png"),
+            Path("../mlsk/static/images/logo.png"),
+            Path("static/assets/microlearn-logo.png"),
+        ]
+        
+        self.logo = None
+        for logo_path in logo_paths:
+            if logo_path.exists():
+                try:
+                    self.logo = ImageReader(str(logo_path))
+                    break
+                except Exception as e:
+                    print(f"Warning: Could not load logo from {logo_path}: {e}")
+        
+        if not self.logo:
+            print("Warning: Logo not found in any expected location")
     
     def _setup_styles(self):
         """Setup custom styles for certificate."""
@@ -133,6 +158,22 @@ class CertificateGenerator:
         pdf.setLineWidth(1)
         pdf.rect(0.6 * inch, 0.6 * inch, width - 1.2 * inch, height - 1.2 * inch)
     
+    def _draw_header_with_logo(self, pdf: canvas.Canvas, width: float, height: float):
+        """Draw the MicroLearn logo at the top of the certificate."""
+        if self.logo:
+            # Position for logo - centered at top
+            # Use a larger size since the logo includes text
+            logo_width = 120  # Wider to accommodate text in logo
+            logo_height = 60  # Proportional height
+            logo_x = (width - logo_width) / 2
+            logo_y = height - 1.5 * inch
+            
+            # Draw logo image with embedded text
+            pdf.drawImage(self.logo, logo_x, logo_y, width=logo_width, height=logo_height, mask='auto', preserveAspectRatio=True)
+        
+        # Reset color to black for subsequent text
+        pdf.setFillColor(colors.black)
+    
     def _draw_collection_certificate(
         self,
         pdf: canvas.Canvas,
@@ -141,36 +182,39 @@ class CertificateGenerator:
         height: float
     ):
         """Draw collection certificate content."""
-        # Certificate title
+        # Draw logo header
+        self._draw_header_with_logo(pdf, width, height)
+        
+        # Certificate title (adjusted position to account for logo)
         pdf.setFont("Helvetica-Bold", 32)
-        pdf.drawCentredString(width / 2, height - 1.5 * inch, "Certificate of Completion")
+        pdf.drawCentredString(width / 2, height - 2.5 * inch, "Certificate of Completion")
         
         # Collection name
         pdf.setFont("Helvetica", 20)
-        pdf.drawCentredString(width / 2, height - 2.2 * inch, request.title)
+        pdf.drawCentredString(width / 2, height - 3.2 * inch, request.title)
         
         # Presented to
         pdf.setFont("Helvetica", 16)
-        pdf.drawCentredString(width / 2, height - 3.2 * inch, "This certifies that")
+        pdf.drawCentredString(width / 2, height - 4.2 * inch, "This certifies that")
         
         # Recipient name
         pdf.setFont("Helvetica-Bold", 24)
         pdf.setFillColor(colors.HexColor("#2c5282"))
-        pdf.drawCentredString(width / 2, height - 3.8 * inch, request.user_name)
+        pdf.drawCentredString(width / 2, height - 4.8 * inch, request.user_name)
         pdf.setFillColor(colors.black)
         
         # Completion text
         pdf.setFont("Helvetica", 14)
         pdf.drawCentredString(
             width / 2,
-            height - 4.6 * inch,
+            height - 5.6 * inch,
             "has successfully completed all courses in this collection"
         )
         
         # Completed items
         if request.items_completed:
             pdf.setFont("Helvetica", 12)
-            y_position = height - 5.4 * inch
+            y_position = height - 6.4 * inch
             
             pdf.drawCentredString(width / 2, y_position, "Courses Completed:")
             y_position -= 0.3 * inch
@@ -195,29 +239,32 @@ class CertificateGenerator:
         height: float
     ):
         """Draw course certificate content."""
-        # Certificate title
+        # Draw logo header
+        self._draw_header_with_logo(pdf, width, height)
+        
+        # Certificate title (adjusted position to account for logo)
         pdf.setFont("Helvetica-Bold", 32)
-        pdf.drawCentredString(width / 2, height - 1.5 * inch, "Certificate of Achievement")
+        pdf.drawCentredString(width / 2, height - 2.5 * inch, "Certificate of Achievement")
         
         # Course name
         pdf.setFont("Helvetica", 20)
-        pdf.drawCentredString(width / 2, height - 2.2 * inch, request.title)
+        pdf.drawCentredString(width / 2, height - 3.2 * inch, request.title)
         
         # Presented to
         pdf.setFont("Helvetica", 16)
-        pdf.drawCentredString(width / 2, height - 3.2 * inch, "This certifies that")
+        pdf.drawCentredString(width / 2, height - 4.2 * inch, "This certifies that")
         
         # Recipient name
         pdf.setFont("Helvetica-Bold", 24)
         pdf.setFillColor(colors.HexColor("#2c5282"))
-        pdf.drawCentredString(width / 2, height - 3.8 * inch, request.user_name)
+        pdf.drawCentredString(width / 2, height - 4.8 * inch, request.user_name)
         pdf.setFillColor(colors.black)
         
         # Completion text
         pdf.setFont("Helvetica", 14)
         pdf.drawCentredString(
             width / 2,
-            height - 4.6 * inch,
+            height - 5.6 * inch,
             "has successfully completed this course"
         )
         
@@ -226,7 +273,7 @@ class CertificateGenerator:
             pdf.setFont("Helvetica", 12)
             # Word wrap description
             lines = self._wrap_text(request.description, 60)
-            y_position = height - 5.4 * inch
+            y_position = height - 6.4 * inch
             for line in lines[:3]:  # Show max 3 lines
                 pdf.drawCentredString(width / 2, y_position, line)
                 y_position -= 0.25 * inch
@@ -239,29 +286,32 @@ class CertificateGenerator:
         height: float
     ):
         """Draw achievement certificate content."""
-        # Certificate title
+        # Draw logo header
+        self._draw_header_with_logo(pdf, width, height)
+        
+        # Certificate title (adjusted position to account for logo)
         pdf.setFont("Helvetica-Bold", 32)
-        pdf.drawCentredString(width / 2, height - 1.5 * inch, "Certificate of Achievement")
+        pdf.drawCentredString(width / 2, height - 2.5 * inch, "Certificate of Achievement")
         
         # Achievement name
         pdf.setFont("Helvetica", 20)
-        pdf.drawCentredString(width / 2, height - 2.2 * inch, request.title)
+        pdf.drawCentredString(width / 2, height - 3.2 * inch, request.title)
         
         # Presented to
         pdf.setFont("Helvetica", 16)
-        pdf.drawCentredString(width / 2, height - 3.2 * inch, "Awarded to")
+        pdf.drawCentredString(width / 2, height - 4.2 * inch, "Awarded to")
         
         # Recipient name
         pdf.setFont("Helvetica-Bold", 24)
         pdf.setFillColor(colors.HexColor("#2c5282"))
-        pdf.drawCentredString(width / 2, height - 3.8 * inch, request.user_name)
+        pdf.drawCentredString(width / 2, height - 4.8 * inch, request.user_name)
         pdf.setFillColor(colors.black)
         
         # Achievement text
         pdf.setFont("Helvetica", 14)
         pdf.drawCentredString(
             width / 2,
-            height - 4.6 * inch,
+            height - 5.6 * inch,
             "in recognition of outstanding achievement"
         )
         
@@ -269,7 +319,7 @@ class CertificateGenerator:
         if request.description:
             pdf.setFont("Helvetica", 12)
             lines = self._wrap_text(request.description, 60)
-            y_position = height - 5.4 * inch
+            y_position = height - 6.4 * inch
             for line in lines[:3]:
                 pdf.drawCentredString(width / 2, y_position, line)
                 y_position -= 0.25 * inch
