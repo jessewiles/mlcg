@@ -19,17 +19,30 @@ cp .env.example .env
 ```
 
 ### Running the Service
+
+**IMPORTANT**: The service is typically run as part of the MicroLearn platform via Docker Compose from the `../mldev` directory.
+
 ```bash
-# Development mode with auto-reload
+# PRIMARY METHOD: Run via Docker Compose from mldev directory
+cd ../mldev
+docker-compose up -d
+cd ../mlcg  # ALWAYS return to mlcg directory after Docker commands
+
+# View logs for the certificate service
+docker-compose -f ../mldev/docker-compose.yml logs -f certificate-service
+
+# Restart just the certificate service
+cd ../mldev && docker-compose restart certificate-service && cd ../mlcg
+
+# Alternative: Development mode with auto-reload (standalone)
 poetry run uvicorn app.main:app --reload --port 8001
 
-# Run with Docker Compose (includes Redis)
-docker-compose up --build
-
-# Run standalone Docker container
+# Alternative: Run standalone Docker container
 docker build -t mlcg .
 docker run -p 8001:8001 --env-file .env mlcg
 ```
+
+**Note**: When running Docker commands from mldev, ALWAYS return to the mlcg directory (`cd ../mlcg`) to maintain the correct working directory for development.
 
 ### Testing
 ```bash
