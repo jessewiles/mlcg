@@ -208,7 +208,7 @@ class CertificateGenerator:
         pdf.drawCentredString(
             width / 2,
             height - 5.6 * inch,
-            "has successfully completed all courses in this collection"
+            "has successfully completed all courses in this track"
         )
         
         # Completed items
