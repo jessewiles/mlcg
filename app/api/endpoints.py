@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 import redis
 from fastapi import APIRouter, HTTPException, status
@@ -15,10 +15,12 @@ from app.models import (
     CertificateRequest,
     CertificateResponse,
     CertificateStatus,
+    CertificateVerification,
     HealthResponse,
 )
 from app.services.generator import certificate_generator
 from app.services.storage import storage_service
+from app.services.verification import verification_service
 
 # Create router
 router = APIRouter(prefix=settings.api_prefix, tags=["certificates"])
@@ -72,9 +74,18 @@ async def generate_certificate(request: CertificateRequest) -> CertificateRespon
         with generation_duration.time():
             pdf_data = await certificate_generator.generate_certificate(request)
 
-        # Upload to storage
+        # Upload to storage with metadata
+        metadata = {
+            "user_name": request.user_name,
+            "user_email": request.user_email,
+            "certificate_type": request.certificate_type.value,
+            "title": request.title,
+            "description": request.description or "",
+            "items_completed": ",".join(request.items_completed) if request.items_completed else "",
+            "issued_date": request.issued_date.isoformat() if request.issued_date else datetime.utcnow().isoformat(),
+        }
         s3_key = await storage_service.upload_certificate(
-            pdf_data, request.certificate_id, request.user_email
+            pdf_data, request.certificate_id, request.user_email, metadata
         )
 
         # Cache the S3 key
@@ -192,8 +203,27 @@ async def generate_batch_certificates(
         )
 
 
+@router.get("/verify/{certificate_id}", response_model=CertificateVerification)
+async def verify_certificate(certificate_id: str) -> CertificateVerification:
+    """Verify the authenticity of a certificate.
+
+    Args:
+        certificate_id: Certificate ID to verify
+
+    Returns:
+        Certificate verification details
+    """
+    verification = await verification_service.verify_certificate(certificate_id)
+    if not verification:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Certificate not found or invalid."
+        )
+    return verification
+
+
 @router.get("/certificates/{certificate_id}/download-url")
-async def get_certificate_download_url(certificate_id: str) -> Dict[str, Any]:
+async def get_certificate_download_url(certificate_id: str) -> dict[str, Any]:
     """Get a fresh presigned URL for downloading a certificate.
 
     Args:
@@ -289,8 +319,8 @@ async def get_certificate_status(certificate_id: str) -> CertificateStatus:
         )
 
 
-@router.get("/batch/{job_id}", response_model=Dict)
-async def get_batch_status(job_id: str) -> Dict:
+@router.get("/batch/{job_id}", response_model=dict)
+async def get_batch_status(job_id: str) -> dict:
     """Get batch job status.
 
     Args:

@@ -8,6 +8,7 @@ from .certificate import (
     CertificateStatus,
     CertificateType,
     HealthResponse,
+    CertificateVerification,
 )
 
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     "BatchCertificateRequest",
     "BatchCertificateResponse",
     "CertificateStatus",
+    "CertificateVerification",
     "HealthResponse",
 ]
