@@ -128,8 +128,8 @@ class CertificateGenerator:
         self._draw_border(pdf, width, height)
         
         # Add certificate content based on type
-        if request.certificate_type == CertificateType.COLLECTION:
-            self._draw_collection_certificate(pdf, request, width, height)
+        if request.certificate_type == CertificateType.TRACK:
+            self._draw_track_certificate(pdf, request, width, height)
         elif request.certificate_type == CertificateType.COURSE:
             self._draw_course_certificate(pdf, request, width, height)
         elif request.certificate_type == CertificateType.ACHIEVEMENT:
@@ -174,14 +174,14 @@ class CertificateGenerator:
         # Reset color to black for subsequent text
         pdf.setFillColor(colors.black)
     
-    def _draw_collection_certificate(
+    def _draw_track_certificate(
         self,
         pdf: canvas.Canvas,
         request: CertificateRequest,
         width: float,
         height: float
     ):
-        """Draw collection certificate content."""
+        """Draw track certificate content."""
         # Draw logo header
         self._draw_header_with_logo(pdf, width, height)
         
@@ -349,7 +349,7 @@ class CertificateGenerator:
         pdf.drawCentredString(
             width / 2,
             1.2 * inch,
-            "Verify at: certificates.microlearn.com/verify"
+            "Verify at: tracks.microlearn.com/verify"
         )
     
     def _wrap_text(self, text: str, max_chars: int) -> List[str]:

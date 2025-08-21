@@ -9,7 +9,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 class CertificateType(str, Enum):
     """Certificate type enumeration."""
-    COLLECTION = "collection"
+    TRACK = "track"
     COURSE = "course"
     ACHIEVEMENT = "achievement"
 
@@ -33,9 +33,9 @@ class CertificateRequest(BaseModel):
             "example": {
                 "user_name": "John Doe",
                 "user_email": "john.doe@example.com",
-                "certificate_type": "collection",
-                "title": "Python Mastery Collection",
-                "description": "Successfully completed all courses in the Python Mastery collection",
+                "certificate_type": "track",
+                "title": "Python Mastery Track",
+                "description": "Successfully completed all courses in the Python Mastery track",
                 "items_completed": ["Python Basics", "Advanced Python", "Python Web Development"],
                 "issued_date": "2024-01-15T10:00:00Z",
                 "certificate_id": "CERT-2024-001",
