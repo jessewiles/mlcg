@@ -4,6 +4,7 @@
 import asyncio
 import os
 from datetime import datetime
+import pytest
 
 # Set up environment
 os.environ["STORAGE_BACKEND"] = "s3"
@@ -13,6 +14,7 @@ os.environ["AWS_REGION"] = "us-east-1"
 from app.services.storage import storage_service
 
 
+@pytest.mark.asyncio
 async def test_presigned_urls():
     """Test presigned URL generation."""
     

@@ -18,9 +18,9 @@ def sample_certificate_request():
     return {
         "user_name": "Test User",
         "user_email": "test@example.com",
-        "certificate_type": "collection",
-        "title": "Python Mastery Collection",
-        "description": "Successfully completed all courses in the Python Mastery collection",
+        "certificate_type": "track",
+        "title": "Python Mastery Track",
+        "description": "Successfully completed all courses in the Python Mastery track",
         "items_completed": ["Python Basics", "Advanced Python", "Python Web Development"],
         "certificate_id": "TEST-CERT-001"
     }
