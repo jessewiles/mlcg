@@ -83,8 +83,11 @@ class VerificationService:
         verification_url = f"{self.verify_base_url}/{certificate_id}"
         
         # Parse metadata and return verification response
-        items_str = certificate_data.get("items_completed", "")
-        items_completed = items_str.split(",") if items_str else []
+        items_value = certificate_data.get("items_completed", "")
+        if isinstance(items_value, list):
+            items_completed = items_value
+        else:
+            items_completed = items_value.split(",") if items_value else []
         
         # Parse issued date
         issued_date_str = certificate_data.get("issued_date")

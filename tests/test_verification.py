@@ -36,8 +36,8 @@ async def test_verify_certificate_success(
     certificate_id = "TRACK-TEST-123"
     s3_key = f"certificates/2025/08/{certificate_id}.pdf"
     
-    # Mock storage service
-    with patch("app.services.storage.storage_service") as mock_storage:
+    # Mock storage service (patch where it's used)
+    with patch("app.services.verification.storage_service") as mock_storage:
         # Mock certificate existence check
         mock_storage.certificate_exists = AsyncMock(return_value=True)
         
@@ -57,15 +57,16 @@ async def test_verify_certificate_success(
         assert verification.certificate_type == CertificateType.TRACK
         assert verification.title == sample_metadata["title"]
         assert verification.items_completed == sample_metadata["items_completed"]
-        assert "tracks.microlearn" in verification.verification_url
+        # In development this may be localhost; in prod it will be tracks.microlearn.*
+        assert verification.verification_url.endswith(f"/verify/{certificate_id}")
         assert verification.download_url == "https://example.com/cert.pdf"
 
 
 @pytest.mark.asyncio
 async def test_verify_certificate_not_found(verification_service):
     """Test verification of non-existent certificate."""
-    # Mock storage service
-    with patch("app.services.storage.storage_service") as mock_storage:
+    # Mock storage service (patch where it's used)
+    with patch("app.services.verification.storage_service") as mock_storage:
         # Mock certificate existence check
         mock_storage.certificate_exists = AsyncMock(return_value=False)
         
@@ -81,8 +82,8 @@ async def test_verify_certificate_api(client, sample_metadata):
     """Test certificate verification API endpoint."""
     certificate_id = "TRACK-TEST-123"
     
-    # Mock verification service
-    with patch("app.services.verification.verification_service") as mock_service:
+    # Mock verification service (patch the instance used by the endpoint)
+    with patch("app.api.endpoints.verification_service") as mock_service:
         # Mock successful verification
         mock_service.verify_certificate = AsyncMock(
             return_value=CertificateVerification(
