@@ -169,3 +169,35 @@ class HealthResponse(BaseModel):
                 }
             }
         }
+
+
+class CertificateVerification(BaseModel):
+    """Model for certificate verification."""
+    
+    certificate_id: str = Field(..., description="Certificate identifier")
+    user_name: str = Field(..., description="Name of the certificate recipient")
+    user_email: EmailStr = Field(..., description="Email of the certificate recipient")
+    certificate_type: CertificateType = Field(..., description="Type of certificate")
+    title: str = Field(..., description="Certificate title")
+    description: Optional[str] = Field(None, description="Certificate description")
+    items_completed: List[str] = Field(default_factory=list, description="List of completed items")
+    issued_date: datetime = Field(..., description="Date of issuance")
+    verification_url: str = Field(..., description="URL where certificate can be verified")
+    download_url: Optional[str] = Field(None, description="URL to download the certificate")
+    
+    class Config:
+        """Pydantic config."""
+        json_schema_extra = {
+            "example": {
+                "certificate_id": "TRACK-2024-001",
+                "user_name": "John Doe",
+                "user_email": "john.doe@example.com",
+                "certificate_type": "track",
+                "title": "Python Mastery Track",
+                "description": "Successfully completed all courses in the Python Mastery track",
+                "items_completed": ["Python Basics", "Advanced Python", "Python Web Development"],
+                "issued_date": "2024-01-15T10:00:00Z",
+                "verification_url": "https://tracks.microlearn.university/verify/TRACK-2024-001",
+                "download_url": "https://certificates.example.com/certificates/2024/01/TRACK-2024-001.pdf"
+            }
+        }
