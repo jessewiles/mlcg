@@ -4,13 +4,16 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.templating import Jinja2Templates
 from prometheus_client import make_asgi_app
+from pathlib import Path
 
 from app.api.endpoints import router
 from app.config import settings
+from app.services.verification import verification_service
 
 # Configure logging
 logging.basicConfig(
@@ -86,6 +89,20 @@ async def log_requests(request: Request, call_next):
 # Include routers
 app.include_router(router)
 
+# Set up templates for HTML pages (e.g., verification page)
+templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+
+
+# HTML verification endpoint (non-API, user-facing)
+@app.get("/verify/{certificate_id}")
+async def verify_certificate_html(request: Request, certificate_id: str):
+    verification = await verification_service.verify_certificate(certificate_id)
+    if not verification:
+        raise HTTPException(status_code=404, detail="Certificate not found")
+    return templates.TemplateResponse(
+        "verify.html",
+        {"request": request, "certificate": verification}
+    )
 
 # Root endpoint
 @app.get("/")

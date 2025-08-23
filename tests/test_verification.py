@@ -101,7 +101,7 @@ async def test_verify_certificate_api(client, sample_metadata):
         )
         
         # Test successful verification
-        response = client.get(f"/api/v1/verify/{certificate_id}")
+        response = client.get(f"/api/v1/certificates/{certificate_id}/verify", headers={"Accept": "application/json"})
         assert response.status_code == 200
         data = response.json()
         assert data["certificate_id"] == certificate_id
@@ -112,6 +112,6 @@ async def test_verify_certificate_api(client, sample_metadata):
         
         # Test non-existent certificate
         mock_service.verify_certificate = AsyncMock(return_value=None)
-        response = client.get("/api/v1/verify/INVALID-123")
+        response = client.get("/api/v1/certificates/INVALID-123/verify", headers={"Accept": "application/json"})
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()

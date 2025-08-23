@@ -79,7 +79,7 @@ class VerificationService:
         # Get fresh download URL
         download_url = storage_service.get_presigned_url(s3_key)
         
-        # Construct verification URL
+        # Construct verification URL - the user-facing URL, not the API URL
         verification_url = f"{self.verify_base_url}/{certificate_id}"
         
         # Parse metadata and return verification response

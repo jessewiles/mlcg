@@ -203,7 +203,8 @@ async def generate_batch_certificates(
         )
 
 
-@router.get("/verify/{certificate_id}", response_model=CertificateVerification)
+# Moved API endpoint to better reflect resource hierarchy
+@router.get("/certificates/{certificate_id}/verify", response_model=CertificateVerification)
 async def verify_certificate(certificate_id: str) -> CertificateVerification:
     """Verify the authenticity of a certificate.
 
