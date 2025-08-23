@@ -74,18 +74,9 @@ async def generate_certificate(request: CertificateRequest) -> CertificateRespon
         with generation_duration.time():
             pdf_data = await certificate_generator.generate_certificate(request)
 
-        # Upload to storage with metadata
-        metadata = {
-            "user_name": request.user_name,
-            "user_email": request.user_email,
-            "certificate_type": request.certificate_type.value,
-            "title": request.title,
-            "description": request.description or "",
-            "items_completed": ",".join(request.items_completed) if request.items_completed else "",
-            "issued_date": request.issued_date.isoformat() if request.issued_date else datetime.utcnow().isoformat(),
-        }
+        # Upload to storage (without metadata)
         s3_key = await storage_service.upload_certificate(
-            pdf_data, request.certificate_id, request.user_email, metadata
+            pdf_data, request.certificate_id, request.user_email
         )
 
         # Cache the S3 key
@@ -165,7 +156,7 @@ async def generate_batch_certificates(
                     cert_request
                 )
 
-                # Upload to storage
+                # Upload to storage (without metadata)
                 s3_key = await storage_service.upload_certificate(
                     pdf_data, cert_request.certificate_id, cert_request.user_email
                 )

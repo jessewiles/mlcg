@@ -66,17 +66,6 @@ class StorageBackend(ABC):
         """
         pass
     
-    @abstractmethod
-    async def get_metadata(self, key: str) -> dict[str, Any] | None:
-        """Get metadata from storage.
-        
-        Args:
-            key: Storage key/path
-            
-        Returns:
-            Metadata dictionary or None if not found
-        """
-        pass
 
 
 class S3Storage(StorageBackend):
@@ -111,16 +100,12 @@ class S3Storage(StorageBackend):
             S3 object key
         """
         try:
-            # Upload to S3
+            # Upload to S3 without metadata
             self.s3_client.put_object(
                 Bucket=self.bucket_name,
                 Key=key,
                 Body=file_data,
-                ContentType=content_type,
-                Metadata={
-                    "uploaded_at": datetime.utcnow().isoformat(),
-                    "service": settings.service_name,
-                }
+                ContentType=content_type
             )
             
             return key
@@ -170,16 +155,6 @@ class S3Storage(StorageBackend):
         except ClientError:
             return False
     
-    async def get_metadata(self, key: str) -> dict[str, Any] | None:
-        """Get metadata from S3 object."""
-        try:
-            response = self.s3_client.head_object(
-                Bucket=self.bucket_name,
-                Key=key
-            )
-            return response.get('Metadata', {})
-        except (self.s3_client.exceptions.NoSuchKey, ClientError):
-            return None
     
     def generate_presigned_url(self, key: str, expiration: int = 3600) -> str:
         """Generate a presigned URL for downloading.
@@ -245,19 +220,6 @@ class LocalStorage(StorageBackend):
         file_path = self.base_path / key
         return file_path.exists()
     
-    async def get_metadata(self, key: str) -> dict[str, Any] | None:
-        """Get metadata from local file."""
-        # For local storage, we'll store metadata in a parallel .meta file
-        file_path = self.base_path / f"{key}.meta"
-        if not file_path.exists():
-            return None
-        
-        try:
-            with open(file_path, 'r') as f:
-                import json
-                return json.load(f)
-        except Exception:
-            return None
 
 
 class StorageService:
@@ -276,8 +238,7 @@ class StorageService:
         self,
         pdf_data: bytes,
         certificate_id: str,
-        user_email: str,
-        metadata: dict[str, Any] | None = None
+        user_email: str
     ) -> str:
         """Upload certificate to storage.
         
@@ -292,24 +253,6 @@ class StorageService:
         # Generate storage key with date-based organization
         now = datetime.utcnow()
         key = f"certificates/{now.year}/{now.month:02d}/{certificate_id}.pdf"
-        
-        # If we're using S3 and have metadata, upload with metadata
-        if isinstance(self.backend, S3Storage) and metadata:
-            try:
-                self.backend.s3_client.put_object(
-                    Bucket=self.backend.bucket_name,
-                    Key=key,
-                    Body=pdf_data,
-                    ContentType="application/pdf",
-                    Metadata={
-                        "uploaded_at": now.isoformat(),
-                        "service": settings.service_name,
-                        **{k: str(v) if v is not None else "" for k, v in metadata.items()}
-                    }
-                )
-                return key
-            except Exception as e:
-                raise ValueError(f"Failed to upload with metadata: {e}")
         
         return await self.backend.upload(pdf_data, key)
     
@@ -346,16 +289,6 @@ class StorageService:
         """
         return await self.backend.exists(key)
     
-    async def get_metadata(self, key: str) -> dict[str, Any] | None:
-        """Get certificate metadata.
-        
-        Args:
-            key: Storage key
-            
-        Returns:
-            Metadata dictionary or None if not found
-        """
-        return await self.backend.get_metadata(key)
     
     def get_presigned_url(self, key: str, expiration: int = 3600) -> str:
         """Get a presigned URL for downloading a certificate.

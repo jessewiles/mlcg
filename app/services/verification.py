@@ -32,25 +32,25 @@ class VerificationService:
     async def verify_certificate(self, certificate_id: str) -> Optional[CertificateVerification]:
         """Verify a certificate.
         
+        Note: Since we no longer store metadata, this method only verifies
+        that the certificate file exists in storage. The actual certificate
+        details should be retrieved from MLAPI's database.
+        
         Args:
             certificate_id: Certificate ID to verify
             
         Returns:
-            CertificateVerification if certificate exists and is valid, None otherwise
+            CertificateVerification if certificate exists, None otherwise
         """
-        # Try to get certificate data from Redis first
-        certificate_data = None
         s3_key = None
         
+        # Check Redis cache for S3 key
         if self.redis_client:
             cached_key = self.redis_client.get(f"cert:{certificate_id}")
             if cached_key:
                 s3_key = cached_key
-                metadata = await self.get_metadata(s3_key)
-                if metadata:
-                    certificate_data = metadata
         
-        # If not in cache, try to find the certificate
+        # If not in cache, construct expected key
         if not s3_key:
             now = datetime.utcnow()
             s3_key = f"certificates/{now.year}/{now.month:02d}/{certificate_id}.pdf"
@@ -65,67 +65,53 @@ class VerificationService:
                     s3_key = f"certificates/{prev_year}/{prev_month:02d}/{certificate_id}.pdf"
                     exists = await storage_service.certificate_exists(s3_key)
                     if not exists:
-                        return None
+                        # Try a few more months back (up to 3 months)
+                        for months_back in range(2, 4):
+                            test_date = datetime.utcnow()
+                            for _ in range(months_back):
+                                if test_date.month == 1:
+                                    test_date = test_date.replace(year=test_date.year - 1, month=12)
+                                else:
+                                    test_date = test_date.replace(month=test_date.month - 1)
+                            s3_key = f"certificates/{test_date.year}/{test_date.month:02d}/{certificate_id}.pdf"
+                            exists = await storage_service.certificate_exists(s3_key)
+                            if exists:
+                                break
+                        if not exists:
+                            return None
                 else:
                     return None
-            
-            # Get metadata from storage
-            metadata = await self.get_metadata(s3_key)
-            if not metadata:
+        else:
+            # Verify the cached key still exists
+            exists = await storage_service.certificate_exists(s3_key)
+            if not exists:
+                # Clear invalid cache entry
+                if self.redis_client:
+                    self.redis_client.delete(f"cert:{certificate_id}")
                 return None
-            
-            certificate_data = metadata
         
-        # Get fresh download URL
+        # Certificate exists - generate download URL
         download_url = storage_service.get_presigned_url(s3_key)
         
-        # Construct verification URL - the user-facing URL, not the API URL
+        # Construct verification URL
         verification_url = f"{self.verify_base_url}/{certificate_id}"
         
-        # Parse metadata and return verification response
-        items_value = certificate_data.get("items_completed", "")
-        if isinstance(items_value, list):
-            items_completed = items_value
-        else:
-            items_completed = items_value.split(",") if items_value else []
-        
-        # Parse issued date
-        issued_date_str = certificate_data.get("issued_date")
-        if issued_date_str:
-            issued_date = datetime.fromisoformat(issued_date_str)
-        else:
-            issued_date = datetime.utcnow()
-        
+        # Return basic verification info with placeholder data
+        # Note: The actual certificate details (user name, course/track info, etc.)
+        # should be fetched from MLAPI's database when the verification endpoint
+        # is called from MLAPI
         return CertificateVerification(
             certificate_id=certificate_id,
-            user_name=certificate_data.get("user_name", ""),
-            user_email=certificate_data.get("user_email", ""),
-            certificate_type=certificate_data.get("certificate_type", "track"),
-            title=certificate_data.get("title", ""),
-            description=certificate_data.get("description") or None,
-            items_completed=items_completed,
-            issued_date=issued_date,
+            user_name="Certificate Holder",  # Placeholder - should be fetched from MLAPI
+            user_email="certificate@microlearn.university",  # Placeholder - should be fetched from MLAPI
+            certificate_type="track",  # Placeholder - should be determined from MLAPI
+            title="Certificate",  # Placeholder - should be fetched from MLAPI
+            description=None,
+            items_completed=[],  # Should be fetched from MLAPI
+            issued_date=datetime.utcnow(),  # Should be fetched from MLAPI
             verification_url=verification_url,
             download_url=download_url
         )
-    
-    async def get_metadata(self, s3_key: str) -> Optional[Dict[str, Any]]:
-        """Get certificate metadata from storage.
-        
-        Args:
-            s3_key: S3 object key
-            
-        Returns:
-            Certificate metadata or None if not found
-        """
-        try:
-            metadata = await storage_service.get_metadata(s3_key)
-            if metadata:
-                return metadata
-        except Exception:
-            return None
-        
-        return None
 
 
 # Global verification service instance
