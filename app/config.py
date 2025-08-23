@@ -63,6 +63,15 @@ class Settings(BaseSettings):
     celery_result_backend: str = "redis://localhost:6379/1"
     celery_task_always_eager: bool = False  # Set True for testing
 
+    # Database Configuration
+    database_url: str = os.getenv(
+        "DATABASE_URL",
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/mlcg"
+    )
+    database_echo: bool = False  # Set to True to log SQL queries
+    database_pool_size: int = 10
+    database_max_overflow: int = 20
+    
     # Service URLs
     mlapi_url: str = "http://localhost:8000"
 

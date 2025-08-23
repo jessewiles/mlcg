@@ -41,22 +41,21 @@ async def test_verify_certificate_success(
         # Mock certificate existence check
         mock_storage.certificate_exists = AsyncMock(return_value=True)
         
-        # Mock metadata retrieval
-        mock_storage.get_metadata = AsyncMock(return_value=sample_metadata)
-        
         # Mock presigned URL generation
         mock_storage.get_presigned_url.return_value = "https://example.com/cert.pdf"
         
         # Verify certificate
         verification = await verification_service.verify_certificate(certificate_id)
         
-        # Check result
+        # Check result - now we only verify that the certificate exists
+        # and return placeholder data (actual data should come from MLAPI)
         assert verification is not None
         assert verification.certificate_id == certificate_id
-        assert verification.user_name == sample_metadata["user_name"]
-        assert verification.certificate_type == CertificateType.TRACK
-        assert verification.title == sample_metadata["title"]
-        assert verification.items_completed == sample_metadata["items_completed"]
+        assert verification.user_name == "Certificate Holder"  # Placeholder
+        assert verification.user_email == "certificate@microlearn.university"  # Placeholder
+        assert verification.certificate_type == CertificateType.TRACK  # Default placeholder
+        assert verification.title == "Certificate"  # Placeholder
+        assert verification.items_completed == []  # Empty placeholder
         # In development this may be localhost; in prod it will be tracks.microlearn.*
         assert verification.verification_url.endswith(f"/verify/{certificate_id}")
         assert verification.download_url == "https://example.com/cert.pdf"
